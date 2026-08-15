@@ -1,16 +1,12 @@
-use std::time::Duration;
+use gstreamer as gst;
 
 pub mod encoder;
+pub mod h264;
+pub mod rav1e;
 
-pub struct VideoFrame {
-    pub timestamp: Option<Duration>,
-    pub duration: Option<Duration>,
-    pub data: Vec<u8>,
-}
-
-pub struct EncodedVideoFrame {
-    pub timestamp: Option<Duration>,
-    pub duration: Option<Duration>,
+pub struct EncodedVideoUnit {
+    pub timestamp: Option<gst::ClockTime>,
+    pub duration: Option<gst::ClockTime>,
     pub keyframe: bool,
     pub data: Vec<u8>,
 }
