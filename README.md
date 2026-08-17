@@ -64,26 +64,26 @@ These experiments are separate from the core MoQ implementation.
 
 ## Milestone 2.2: Bidirectional Streams
 
-- [ ] Client opens bidirectional stream
-- [ ] Server accepts bidirectional stream
-- [ ] Client sends bytes
-- [ ] Server receives bytes
-- [ ] Server sends bytes
-- [ ] Client receives bytes
-- [ ] Understand `send` / `recv`
-- [ ] Understand `open_bi()` / `accept_bi()`
-- [ ] Understand stream completion with `finish()`
-- [ ] Understand connection lifetime
+- [x] Client opens bidirectional stream
+- [x] Server accepts bidirectional stream
+- [x] Client sends bytes
+- [x] Server receives bytes
+- [x] Server sends bytes
+- [x] Client receives bytes
+- [x] Understand `send` / `recv`
+- [x] Understand `open_bi()` / `accept_bi()`
+- [x] Understand stream completion with `finish()`
+- [x] Understand connection lifetime
 
 ## Milestone 2.3: Echo Server
 
-- [ ] Client sends a message
-- [ ] Server receives the message
-- [ ] Server echoes the exact bytes back
-- [ ] Client receives the echoed message
-- [ ] Verify the echoed payload matches the original payload
-- [ ] Support multiple messages over a connection
-- [ ] Keep a stream open for multiple messages
+- [x] Client sends a message
+- [x] Server receives the message
+- [x] Server echoes the exact bytes back
+- [x] Client receives the echoed message
+- [x] Verify the echoed payload matches the original payload
+- [x] Support multiple messages over a connection
+- [x] Keep a stream open for multiple messages
 
 ---
 

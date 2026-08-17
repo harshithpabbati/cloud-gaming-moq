@@ -48,5 +48,29 @@ async fn main() {
         .await
         .expect("failed to establish connection");
 
-    println!("Connected to {}", connection.remote_address());
+    let (mut send, mut recv) = connection
+        .open_bi()
+        .await
+        .expect("failed to open bidirectional stream");
+
+    let messages: &[&[u8]] = &[b"Hello", b"World", b"MoQ"];
+
+    for message in messages {
+        send.write_all(message)
+            .await
+            .expect("failed to send message");
+    }
+
+    send.finish().expect("failed to finish stream");
+
+    while let Some(chunk) = recv
+        .read_chunk(1024, true)
+        .await
+        .expect("failed to read response")
+    {
+        println!(
+            "Received from server: {}",
+            String::from_utf8_lossy(&chunk.bytes)
+        );
+    }
 }

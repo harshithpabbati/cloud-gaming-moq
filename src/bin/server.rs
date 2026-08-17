@@ -25,5 +25,34 @@ async fn main() {
         let connection = incoming.await.expect("failed to establish connection");
 
         println!("Connected to {}", connection.remote_address());
+
+        let (mut send, mut recv) = connection
+            .accept_bi()
+            .await
+            .expect("failed to open bidirectional stream");
+
+        loop {
+            match recv.read_chunk(1024, true).await {
+                Ok(Some(chunk)) => {
+                    let data = chunk.bytes;
+
+                    println!("Received: {:?}", data);
+
+                    send.write_all(&data).await.expect("failed to echo message");
+                }
+
+                Ok(None) => {
+                    break;
+                }
+
+                Err(error) => {
+                    panic!("failed to read from stream: {error}");
+                }
+            }
+        }
+
+        send.finish().expect("failed to finish stream");
+        println!("Echo complete, keeping connection alive");
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     }
 }
