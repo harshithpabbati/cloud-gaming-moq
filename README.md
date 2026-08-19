@@ -93,16 +93,16 @@ QUIC provides byte streams. It does not provide application-level message bounda
 
 ## Milestone 3.1: Message Framing
 
-- [ ] Identify the message-boundary problem
-- [ ] Design a simple framing format
-- [ ] Define byte ordering
-- [ ] Encode message length
-- [ ] Write framed messages
-- [ ] Read framed messages
-- [ ] Handle partial reads
-- [ ] Handle multiple messages in one stream
-- [ ] Handle malformed frames
-- [ ] Handle oversized messages
+- [x] Identify the message-boundary problem
+- [x] Design a simple framing format
+- [x] Define byte ordering
+- [x] Encode message length
+- [x] Write framed messages
+- [x] Read framed messages
+- [x] Handle partial reads
+- [x] Handle multiple messages in one stream
+- [x] Handle malformed frames
+- [x] Handle oversized messages
 
 Example conceptual format:
 

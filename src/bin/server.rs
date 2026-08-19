@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 
+use moq_rs::protocol::framing::{read_message, write_message};
 use moq_rs::tls::make_server_config;
 use quinn::Endpoint;
 
@@ -31,24 +32,15 @@ async fn main() {
             .await
             .expect("failed to open bidirectional stream");
 
-        loop {
-            match recv.read_chunk(1024, true).await {
-                Ok(Some(chunk)) => {
-                    let data = chunk.bytes;
+        while let Some(message) = read_message(&mut recv)
+            .await
+            .expect("failed to read message")
+        {
+            println!("Received: {}", String::from_utf8_lossy(&message));
 
-                    println!("Received: {:?}", data);
-
-                    send.write_all(&data).await.expect("failed to echo message");
-                }
-
-                Ok(None) => {
-                    break;
-                }
-
-                Err(error) => {
-                    panic!("failed to read from stream: {error}");
-                }
-            }
+            write_message(&mut send, &message)
+                .await
+                .expect("failed to echo message");
         }
 
         send.finish().expect("failed to finish stream");

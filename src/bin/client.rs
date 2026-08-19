@@ -2,6 +2,7 @@ use std::fs;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use moq_rs::protocol::framing::{read_message, write_message};
 use quinn::{ClientConfig, Endpoint};
 use rustls::pki_types::CertificateDer;
 
@@ -53,24 +54,23 @@ async fn main() {
         .await
         .expect("failed to open bidirectional stream");
 
-    let messages: &[&[u8]] = &[b"Hello", b"World", b"MoQ"];
+    let messages: &[&[u8]] = &[b"Hello", b"World", b"MoQ", b"", b"a"];
 
     for message in messages {
-        send.write_all(message)
+        write_message(&mut send, message)
             .await
             .expect("failed to send message");
     }
 
     send.finish().expect("failed to finish stream");
 
-    while let Some(chunk) = recv
-        .read_chunk(1024, true)
+    while let Some(message) = read_message(&mut recv)
         .await
         .expect("failed to read response")
     {
         println!(
             "Received from server: {}",
-            String::from_utf8_lossy(&chunk.bytes)
+            String::from_utf8_lossy(&message)
         );
     }
 }
