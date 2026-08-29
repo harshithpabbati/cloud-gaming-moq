@@ -1,3 +1,4 @@
+use crate::protocol::message::Message;
 use quinn::{RecvStream, SendStream};
 
 pub const MAX_MESSAGE_SIZE: usize = 1024 * 1024;
@@ -40,6 +41,15 @@ pub async fn write_message(
     Ok(())
 }
 
+pub async fn write_protocol_message(
+    send: &mut SendStream,
+    message: &Message,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let encoded = message.encode()?;
+    write_message(send, &encoded).await?;
+    Ok(())
+}
+
 // Read one framed message from a QUIC stream.
 pub async fn read_message(
     recv: &mut RecvStream,
@@ -61,4 +71,15 @@ pub async fn read_message(
     let mut payload = vec![0u8; length];
     recv.read_exact(&mut payload).await?;
     Ok(Some(payload))
+}
+
+pub async fn read_protocol_message(
+    recv: &mut RecvStream,
+) -> Result<Option<Message>, Box<dyn std::error::Error>> {
+    let bytes = match read_message(recv).await? {
+        Some(bytes) => bytes,
+        None => return Ok(None),
+    };
+    let message = Message::decode(&bytes)?;
+    Ok(Some(message))
 }

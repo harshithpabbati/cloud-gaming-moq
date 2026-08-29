@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use moq_rs::protocol::framing::{read_message, write_message};
+use moq_rs::protocol::framing::{read_protocol_message, write_protocol_message};
 use moq_rs::tls::make_server_config;
 use quinn::Endpoint;
 
@@ -32,15 +32,18 @@ async fn main() {
             .await
             .expect("failed to open bidirectional stream");
 
-        while let Some(message) = read_message(&mut recv)
+        while let Some(message) = read_protocol_message(&mut recv)
             .await
-            .expect("failed to read message")
+            .expect("failed to read protocol message")
         {
-            println!("Received: {}", String::from_utf8_lossy(&message));
+            println!(
+                "Received {:?} on channel '{}'",
+                message.message_type, message.channel_name
+            );
 
-            write_message(&mut send, &message)
+            write_protocol_message(&mut send, &message)
                 .await
-                .expect("failed to echo message");
+                .expect("failed to echo protocol message");
         }
 
         send.finish().expect("failed to finish stream");

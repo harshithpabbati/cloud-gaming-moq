@@ -19,17 +19,27 @@ evaluate its latency, scalability, and multi-region behavior.
 
 ## Architecture
 
-Publisher
-│
-▼
-Relay
-/ \
-/ \
-▼ ▼
-Relay Relay
-│ │
-▼ ▼
-Subscribers
+```text
+                           Publisher
+                               │
+                               ▼
+                    ┌───────────────────┐
+                    │   Origin Relay    │
+                    │      Austin       │
+                    └─────────┬─────────┘
+                              │
+                 ┌────────────┴────────────┐
+                 │                         │
+                 ▼                         ▼
+        ┌──────────────────┐      ┌──────────────────┐
+        │    Edge Relay    │      │    Edge Relay    │
+        │    New York      │      │    California    │
+        └────────┬─────────┘      └────────┬─────────┘
+                 │                         │
+                 ▼                         ▼
+          Subscribers               Subscribers
+           (New York)               (California)
+```
 
 ## Roadmap
 
@@ -67,14 +77,28 @@ Subscribers
 - [x] Handle truncated payloads
 - [x] Add unit tests
 
-#### 3.2 Message Layer
+## 3.2: Message Layer
 
-- [ ] Define message types
-- [ ] Define message encoding
-- [ ] Encode messages
-- [ ] Decode messages
-- [ ] Validate messages
-- [ ] Handle unknown message types
+- [x] Define Message enum
+- [x] Define message types
+  - [x] PUBLISH
+  - [x] SUBSCRIBE
+  - [x] UNSUBSCRIBE
+  - [x] DATA
+- [x] Define message structure
+- [x] Define wire representation
+- [x] Implement message encoding
+- [x] Implement message decoding
+- [x] Validate unknown message types
+- [x] Validate malformed messages
+- [x] Validate oversized topics
+- [x] Validate oversized payloads
+- [x] Unit test message encoding
+- [x] Unit test message decoding
+- [x] Test all message types
+- [x] Send messages over QUIC
+- [x] Decode received messages
+- [x] Echo decoded messages
 
 ### Milestone 4: Generic Pub/Sub
 

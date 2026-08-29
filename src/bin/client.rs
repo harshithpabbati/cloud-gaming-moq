@@ -2,7 +2,8 @@ use std::fs;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use moq_rs::protocol::framing::{read_message, write_message};
+use moq_rs::protocol::framing::{read_protocol_message, write_protocol_message};
+use moq_rs::protocol::message::{Message, MessageType};
 use quinn::{ClientConfig, Endpoint};
 use rustls::pki_types::CertificateDer;
 
@@ -49,28 +50,48 @@ async fn main() {
         .await
         .expect("failed to establish connection");
 
+    println!("Connected to {}", connection.remote_address());
+
     let (mut send, mut recv) = connection
         .open_bi()
         .await
         .expect("failed to open bidirectional stream");
 
-    let messages: &[&[u8]] = &[b"Hello", b"World", b"MoQ", b"", b"a"];
+    let messages = [
+        Message {
+            message_type: MessageType::Subscribe,
+            channel_name: "game-123".to_string(),
+            payload: Vec::new(),
+        },
+        Message {
+            message_type: MessageType::Publish,
+            channel_name: "game-123".to_string(),
+            payload: b"Hello RelayMoQ".to_vec(),
+        },
+        Message {
+            message_type: MessageType::Data,
+            channel_name: "game-123".to_string(),
+            payload: b"Frame 1".to_vec(),
+        },
+    ];
 
-    for message in messages {
-        write_message(&mut send, message)
+    for message in &messages {
+        write_protocol_message(&mut send, message)
             .await
-            .expect("failed to send message");
+            .expect("failed to send protocol message");
     }
 
     send.finish().expect("failed to finish stream");
 
-    while let Some(message) = read_message(&mut recv)
+    while let Some(message) = read_protocol_message(&mut recv)
         .await
-        .expect("failed to read response")
+        .expect("failed to read protocol message")
     {
         println!(
-            "Received from server: {}",
-            String::from_utf8_lossy(&message)
+            "Received {:?} on channel '{}': {}",
+            message.message_type,
+            message.channel_name,
+            String::from_utf8_lossy(&message.payload)
         );
     }
 }
