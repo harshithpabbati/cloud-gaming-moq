@@ -1,7 +1,8 @@
 use std::net::SocketAddr;
 
-use moq_rs::protocol::framing::{read_protocol_message};
+use moq_rs::protocol::framing::read_protocol_message;
 use moq_rs::protocol::handler::handle_message;
+use moq_rs::relay::channel::ChannelManager;
 use moq_rs::tls::make_server_config;
 use quinn::Endpoint;
 
@@ -21,10 +22,15 @@ async fn main() {
 
     println!("Server listening on {server_addr}");
 
+    let mut channel_manager = ChannelManager::new();
+    let mut next_client_id = 0;
+
     while let Some(incoming) = endpoint.accept().await {
         println!("Incoming connection...");
 
         let connection = incoming.await.expect("failed to establish connection");
+        let client_id = next_client_id;
+        next_client_id += 1;
 
         println!("Connected to {}", connection.remote_address());
 
@@ -37,7 +43,7 @@ async fn main() {
             .await
             .expect("failed to read protocol message")
         {
-            handle_message(message.clone()).await;
+            handle_message(&message, client_id, &mut channel_manager).await;
         }
 
         send.finish().expect("failed to finish stream");
