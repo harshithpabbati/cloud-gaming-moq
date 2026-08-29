@@ -62,10 +62,10 @@ Subscribers
 - [x] Handle partial reads
 - [x] Handle multiple messages
 - [x] Handle empty messages
-- [ ] Reject oversized messages
-- [ ] Handle truncated headers
-- [ ] Handle truncated payloads
-- [ ] Add unit tests
+- [x] Reject oversized messages
+- [x] Handle truncated headers
+- [x] Handle truncated payloads
+- [x] Add unit tests
 
 #### 3.2 Message Layer
 
