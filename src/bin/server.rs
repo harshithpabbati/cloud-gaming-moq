@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
-use moq_rs::protocol::framing::{read_protocol_message, write_protocol_message};
+use moq_rs::protocol::framing::{read_protocol_message};
+use moq_rs::protocol::handler::handle_message;
 use moq_rs::tls::make_server_config;
 use quinn::Endpoint;
 
@@ -36,14 +37,7 @@ async fn main() {
             .await
             .expect("failed to read protocol message")
         {
-            println!(
-                "Received {:?} on channel '{}'",
-                message.message_type, message.channel_name
-            );
-
-            write_protocol_message(&mut send, &message)
-                .await
-                .expect("failed to echo protocol message");
+            handle_message(message.clone()).await;
         }
 
         send.finish().expect("failed to finish stream");
