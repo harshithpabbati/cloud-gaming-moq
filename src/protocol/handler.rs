@@ -14,7 +14,7 @@ pub async fn handle_message(
             handle_unsubscribe(message, client_id, channel_manager).await;
         }
         MessageType::Publish => {
-            handle_publish(message).await;
+            handle_publish(message, client_id, channel_manager).await;
         }
         MessageType::Data => {
             handle_data(message).await;
@@ -47,12 +47,26 @@ async fn handle_unsubscribe(
     );
 }
 
-async fn handle_publish(message: &Message) {
-    println!(
-        "PUBLISH: channel='{}', payload={} bytes",
-        message.channel_name,
-        message.payload.len()
-    );
+async fn handle_publish(
+    message: &Message,
+    client_id: ClientId,
+    channel_manager: &mut ChannelManager,
+) {
+    match channel_manager.publish(&message.channel_name, client_id) {
+        Ok(()) => {
+            println!(
+                "Client {client_id} is publishing to '{}'",
+                message.channel_name
+            );
+        }
+
+        Err(error) => {
+            println!(
+                "Client {client_id} failed to publish to '{}': {error}",
+                message.channel_name
+            );
+        }
+    }
 }
 
 async fn handle_data(message: &Message) {

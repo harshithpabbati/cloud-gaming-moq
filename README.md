@@ -102,13 +102,13 @@ evaluate its latency, scalability, and multi-region behavior.
 
 ### Milestone 4: Generic Pub/Sub
 
-- [ ] Define topics
-- [ ] Implement SUBSCRIBE
-- [ ] Implement UNSUBSCRIBE
-- [ ] Implement PUBLISH
+- [x] Define topics
+- [x] Implement SUBSCRIBE
+- [x] Implement UNSUBSCRIBE
+- [x] Implement PUBLISH
 - [ ] Maintain subscriptions
 - [ ] Fan out messages
-- [ ] Test multiple publishers
+- [ ] Test multiple publishers (multiple publishers should not be allowed)
 - [ ] Test multiple subscribers
 
 ### Milestone 5: MoQ Integration

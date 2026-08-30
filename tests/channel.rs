@@ -120,3 +120,31 @@ fn test_unsubscribe_unknown_channel() {
 
     assert!(manager.subscribers("does-not-exist").is_none());
 }
+
+#[test]
+fn test_publish_client() {
+    let mut manager = ChannelManager::new();
+
+    manager
+        .publish("game-123", 1)
+        .expect("publish should succeed");
+
+    let publisher = manager.publisher("game-123");
+
+    assert_eq!(publisher, Some(1));
+}
+
+#[test]
+fn test_multiple_publishers_not_allowed() {
+    let mut manager = ChannelManager::new();
+
+    manager
+        .publish("game-123", 1)
+        .expect("first publish should succeed");
+
+    let result = manager.publish("game-123", 2);
+
+    assert!(result.is_err());
+
+    assert_eq!(manager.publisher("game-123"), Some(1));
+}
