@@ -1,14 +1,5 @@
 [package]
-name = "moq-rs"
+name = "cloud-gaming-moq"
 version = "0.1.0"
 edition = "2024"
-
-[dependencies]
-gstreamer = "0.25.3"
-gstreamer-app = "0.25.2"
-gstreamer-video = "0.25.3"
-quinn = "0.11.11"
-rcgen = "0.14.9"
-rustls = { version = "0.23.43", features = ["ring"] }
-tokio = { version = "1.53.1", features = ["full"] }
-uuid = { version = "1.26.0", features = ["v4"] }
+description = "Experimental low-latency cloud gaming system with Media over QUIC"

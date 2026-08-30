@@ -1,217 +1,118 @@
-# RelayMoQ
+# cloud-gaming-moq
 
-A distributed, low-latency pub/sub and relay system built on
-QUIC and Media over QUIC (MoQ).
+An experimental Rust cloud-gaming system that evaluates QUIC and Media over
+QUIC (MoQ) for low-latency game streaming.
 
-The project explores multi-region relay networks, efficient
-data distribution, and eventually cloud gaming workloads.
+The product goal is a player controlling a remotely running game with
+predictable input-to-photon latency.
 
-## Vision
+## Direction
 
-Build a distributed real-time data system where publishers can
-send data through a network of relays to subscribers.
-
-Video is not the core abstraction. It is one type of data that
-the system should eventually support efficiently.
-
-The long-term goal is to build a cloud-gaming architecture and
-evaluate its latency, scalability, and multi-region behavior.
-
-## Architecture
+The core unit is a single `GameSession`: one authorized player, one assigned
+game worker, bidirectional input/media transport, and explicit lifecycle
+management.
 
 ```text
-                           Publisher
-                               │
-                               ▼
-                    ┌───────────────────┐
-                    │   Origin Relay    │
-                    │      Austin       │
-                    └─────────┬─────────┘
-                              │
-                 ┌────────────┴────────────┐
-                 │                         │
-                 ▼                         ▼
-        ┌──────────────────┐      ┌──────────────────┐
-        │    Edge Relay    │      │    Edge Relay    │
-        │    New York      │      │    California    │
-        └────────┬─────────┘      └────────┬─────────┘
-                 │                         │
-                 ▼                         ▼
-          Subscribers               Subscribers
-           (New York)               (California)
+                       control, input, feedback
+  Player client  <-------------------------------->  Session gateway
+       ^                                                    |
+       | video and audio                                    | assignment
+       +----------------------------------------------  Game worker
+                                                        game + GPU encoder
 ```
 
-## Local Demo
+MoQ is a deliberate part of the project name and a technology to evaluate for
+media distribution. It is not assumed to be the correct transport for the
+initial interactive player-to-worker path. That decision will be made using
+latency, loss-recovery, and implementation-complexity measurements.
 
-Start the relay in one terminal:
+## Principles
+
+- A `GameSession`, not a topic or channel, is the primary domain object.
+- Control, input, video, audio, and feedback have distinct delivery rules.
+- Stale input and video must be dropped rather than queued.
+- Game workers should be placed near players; media relays are not on the
+  initial critical path.
+- Every latency-sensitive stage uses a monotonic timestamp.
+- The first success criterion is one playable local session, then LAN, then
+  regional deployment.
+
+## Transport Model
+
+| Traffic         | Expected delivery                       | Candidate transport              |
+| --------------- | --------------------------------------- | -------------------------------- |
+| Session control | Reliable and ordered                    | QUIC bidirectional stream        |
+| Player input    | Sequenced; stale packets dropped        | QUIC datagrams                   |
+| Video           | Frame-aware; stale delta frames dropped | Direct QUIC or MoQ experiment    |
+| Audio           | Low jitter; late audio dropped          | Dedicated QUIC media path        |
+| Client feedback | Best effort                             | QUIC datagrams or control stream |
+
+Encoded media will not use a generic reliable application message queue.
+
+## Current State
+
+The former generic pub/sub relay, camera experiments, development
+certificates, and associated tests have been removed. The repository is now a
+clean cloud-gaming foundation containing only session domain primitives.
+
+There is no runnable streaming demo yet.
+
+## Development
+
+Build and test the foundation:
 
 ```sh
-cargo run --bin relay
+cargo test
 ```
-
-Then run the pub/sub example in another terminal:
-
-```sh
-cargo run --example pubsub
-```
-
-The example opens separate subscriber and publisher connections for `game-123`, then prints the three DATA messages received by the subscriber. The relay currently permits one publisher per channel, so running two publishers for the same channel is rejected by design.
 
 ## Roadmap
 
-### Milestone 1: QUIC Foundation
+### Phase 1: Session and Control Protocol
 
-- [x] Create QUIC server
-- [x] Create QUIC client
-- [x] Establish connection
-- [x] Open bidirectional streams
-- [x] Send data
-- [x] Receive data
+- [x] Rename the project to `cloud-gaming-moq`
+- [x] Remove the generic pub/sub implementation
+- [x] Introduce `GameSessionId` and session lifecycle states
+- [ ] Define session creation, join, ready, end, and error control messages
+- [ ] Define player identity, session authorization, and worker assignment
+- [ ] Add protocol versioning and invalid-message tests
 
-### Milestone 2: Stream Communication
+### Phase 2: Local Interactive Slice
 
-- [x] Echo messages
-- [x] Support multiple messages
-- [x] Explore stream lifecycle
-- [x] Separate relay server from example clients
+- [ ] Build a deterministic game-worker scene with keyboard/controller input
+- [ ] Create a native client that captures input and renders decoded frames
+- [ ] Define sequenced, timestamped input packets
+- [ ] Deliver input over QUIC datagrams and discard stale input
+- [ ] Capture and hardware-encode H.264 video where available
+- [ ] Implement frame metadata, bounded queues, frame dropping, and keyframe
+      requests
+- [ ] Demonstrate a local player controlling the worker at 60 fps
 
-### Milestone 3: Application Protocol
+### Phase 3: Measurement and Recovery
 
-#### 3.1 Message Framing
+- [ ] Timestamp input capture, worker receive, simulation, capture, encode,
+      send, receive, decode, and render
+- [ ] Report p50, p95, and p99 end-to-end and per-stage latency
+- [ ] Report frame rate, bitrate, dropped input, dropped frames, and queue
+      depth
+- [ ] Test latency, loss, jitter, decoder recovery, and worker/client failure
+- [ ] Set hard limits for packet sizes, queues, sessions, and memory
 
-- [x] Identify message-boundary problem
-- [x] Length-prefixed framing
-- [x] Define byte ordering
-- [x] Encode message length
-- [x] Write framed messages
-- [x] Read framed messages
-- [x] Handle partial reads
-- [x] Handle multiple messages
-- [x] Handle empty messages
-- [x] Reject oversized messages
-- [x] Handle truncated headers
-- [x] Handle truncated payloads
-- [x] Add unit tests
+### Phase 4: Audio and Adaptation
 
-#### 3.2 Message Layer
+- [ ] Add low-latency Opus game audio
+- [ ] Add client audio playback and bounded jitter buffering
+- [ ] Adapt bitrate, resolution, and frame rate from congestion and feedback
+- [ ] Add on-demand keyframe recovery
 
-- [x] Define Message enum
-- [x] Define message types
-  - [x] PUBLISH
-  - [x] SUBSCRIBE
-  - [x] UNSUBSCRIBE
-  - [x] DATA
-- [x] Define message structure
-- [x] Define wire representation
-- [x] Implement message encoding
-- [x] Implement message decoding
-- [x] Validate unknown message types
-- [x] Validate malformed messages
-- [x] Validate oversized topics
-- [x] Validate oversized payloads
-- [x] Unit test message encoding
-- [x] Unit test message decoding
-- [x] Test all message types
-- [x] Send messages over QUIC
-- [x] Decode received messages
+### Phase 5: Worker and Regional Deployment
 
-### Milestone 4: Generic Pub/Sub
+- [ ] Add a worker registry, health checks, capacity, and session assignment
+- [ ] Separate gateway and worker processes
+- [ ] Validate LAN deployment before remote deployment
+- [ ] Add region-aware placement and admission control
 
-- [x] Define topics
-- [x] Implement SUBSCRIBE
-- [x] Implement UNSUBSCRIBE
-- [x] Implement PUBLISH
-- [x] Maintain subscriptions
-- [x] Track channel publishers
-- [x] Restrict DATA to the registered publisher
-- [x] Fan out DATA to subscribers
-- [x] Support multiple subscribers
-- [x] Prevent multiple publishers on the same topic
-- [x] Handle client disconnect cleanup
-- [x] Add relay lifecycle tests
+### Phase 6: MoQ Evaluation and Distribution
 
-### Milestone 5: Relay Service
-
-- [x] Build standalone relay
-- [x] Separate protocol and relay layers
-- [x] Introduce Relay service boundary
-- [x] Track connected clients
-- [x] Maintain per-client outbound channels
-- [x] Forward published data to subscribers
-- [x] Clean up client state on disconnect
-- [ ] Implement QUIC outbound writer
-- [ ] Add end-to-end publisher → relay → subscriber test
-- [ ] Define backpressure behavior
-- [ ] Define connection and resource limits
-
-### Milestone 6: Cloud Gaming Example
-
-- [ ] Create cloud gaming example
-- [ ] Simulate game server as publisher
-- [ ] Simulate game client as subscriber
-- [ ] Publish game state/frame data
-- [ ] Receive game data at the client
-- [ ] Measure relay forwarding latency
-
-### Milestone 7: MoQ Integration
-
-- [ ] Map pub/sub concepts to MoQ
-- [ ] Define tracks
-- [ ] Define groups
-- [ ] Define objects
-- [ ] Implement MoQ publisher
-- [ ] Implement MoQ subscriber
-- [ ] Compare application-level framing with MoQ framing
-
-### Milestone 8: Multi-Relay Network
-
-- [ ] Connect relays
-- [ ] Relay-to-relay subscriptions
-- [ ] Forward data across relays
-- [ ] Implement inter-relay fanout
-- [ ] Build Austin / New York / London topology
-- [ ] Measure multi-hop latency
-- [ ] Test relay failures
-
-### Milestone 9: Video
-
-- [ ] Integrate AV1 encoder
-- [ ] Represent video as application data
-- [ ] Publish video
-- [ ] Subscribe to video
-- [ ] Decode video
-- [ ] Measure end-to-end latency
-- [ ] Measure throughput
-- [ ] Measure frame loss
-
-### Milestone 10: Cloud Gaming
-
-- [ ] Game input channel
-- [ ] Game video channel
-- [ ] Audio channel
-- [ ] GPU-backed game instance
-- [ ] Input → game latency measurement
-- [ ] Game → display latency measurement
-- [ ] Glass-to-glass latency
-- [ ] Multi-region game sessions
-- [ ] Compare against SFU architecture
-
-## Design Principles
-
-- QUIC provides transport.
-- Framing provides message boundaries.
-- Messages provide application semantics.
-- Pub/sub provides data distribution.
-- MoQ provides media-oriented transport semantics.
-- Relays provide distribution across regions.
-- Video is an application of the system, not the system itself.
-
-## Goals
-
-- Low latency
-- Efficient fanout
-- Multi-region distribution
-- Minimal unnecessary data copying
-- Observable networking behavior
-- Understandable protocol layers
-- Rust-first implementation
+- [ ] Compare direct QUIC and MoQ for the interactive media path
+- [ ] Add spectator, recording, or broadcast pipelines where fanout is needed
+- [ ] Use MoQ relay distribution only where measurements justify it
