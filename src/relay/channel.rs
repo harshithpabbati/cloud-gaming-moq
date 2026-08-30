@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
+use uuid::Uuid;
 
-pub type ClientId = u64;
+pub type ClientId = Uuid;
 
 #[derive(Debug, Default)]
 pub struct Channel {

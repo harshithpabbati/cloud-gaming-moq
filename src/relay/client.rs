@@ -13,8 +13,10 @@ impl ClientManager {
         }
     }
 
-    pub fn register(&mut self, client_id: ClientId) {
+    pub fn register(&mut self) -> ClientId {
+        let client_id = ClientId::new_v4();
         self.clients.insert(client_id);
+        client_id
     }
 
     pub fn remove(&mut self, client_id: ClientId) {

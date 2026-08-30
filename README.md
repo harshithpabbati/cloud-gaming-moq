@@ -108,8 +108,8 @@ evaluate its latency, scalability, and multi-region behavior.
 - [x] Implement PUBLISH
 - [ ] Maintain subscriptions
 - [ ] Fan out messages
-- [ ] Test multiple publishers (multiple publishers should not be allowed)
-- [ ] Test multiple subscribers
+- [x] Test multiple publishers (multiple publishers should not be allowed)
+- [x] Test multiple subscribers
 
 ### Milestone 5: MoQ Integration
 
