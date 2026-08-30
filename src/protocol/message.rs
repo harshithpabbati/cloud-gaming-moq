@@ -1,7 +1,9 @@
 use std::convert::TryFrom;
 
+use super::MAX_FRAME_PAYLOAD_SIZE;
+
 const MAX_CHANNEL_NAME_SIZE: usize = 256;
-const MAX_PAYLOAD_SIZE: usize = 1024 * 1024;
+const MESSAGE_HEADER_SIZE: usize = 3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -39,15 +41,20 @@ impl Message {
         if channel.len() > MAX_CHANNEL_NAME_SIZE {
             return Err("channel name exceeds maximum size");
         }
-        if self.payload.len() > MAX_PAYLOAD_SIZE {
-            return Err("payload exceeds maximum size");
-        }
         if channel.len() > u16::MAX as usize {
             return Err("channel name is too long");
         }
 
+        let encoded_len = MESSAGE_HEADER_SIZE
+            .checked_add(channel.len())
+            .and_then(|length| length.checked_add(self.payload.len()))
+            .ok_or("message exceeds maximum framed size")?;
+        if encoded_len > MAX_FRAME_PAYLOAD_SIZE {
+            return Err("message exceeds maximum framed size");
+        }
+
         let channel_len = channel.len() as u16;
-        let mut encoded = Vec::with_capacity(1 + 2 + channel.len() + self.payload.len());
+        let mut encoded = Vec::with_capacity(encoded_len);
         encoded.push(self.message_type as u8);
         encoded.extend_from_slice(&channel_len.to_be_bytes());
         encoded.extend_from_slice(channel);
@@ -56,8 +63,11 @@ impl Message {
     }
 
     pub fn decode(bytes: &[u8]) -> Result<Self, &'static str> {
-        if bytes.len() < 3 {
+        if bytes.len() < MESSAGE_HEADER_SIZE {
             return Err("message is too short");
+        }
+        if bytes.len() > MAX_FRAME_PAYLOAD_SIZE {
+            return Err("message exceeds maximum framed size");
         }
         let message_type = MessageType::try_from(bytes[0])?;
         let channel_len = u16::from_be_bytes([bytes[1], bytes[2]]) as usize;
@@ -75,9 +85,6 @@ impl Message {
         let channel_name = String::from_utf8(bytes[channel_start..channel_end].to_vec())
             .map_err(|_| "channel name is not valid UTF-8")?;
         let payload = bytes[channel_end..].to_vec();
-        if payload.len() > MAX_PAYLOAD_SIZE {
-            return Err("payload exceeds maximum size");
-        }
         Ok(Self {
             message_type,
             channel_name,

@@ -41,6 +41,22 @@ evaluate its latency, scalability, and multi-region behavior.
            (New York)               (California)
 ```
 
+## Local Demo
+
+Start the relay in one terminal:
+
+```sh
+cargo run --bin relay
+```
+
+Then run the pub/sub example in another terminal:
+
+```sh
+cargo run --example pubsub
+```
+
+The example opens separate subscriber and publisher connections for `game-123`, then prints the three DATA messages received by the subscriber. The relay currently permits one publisher per channel, so running two publishers for the same channel is rejected by design.
+
 ## Roadmap
 
 ### Milestone 1: QUIC Foundation
@@ -56,8 +72,8 @@ evaluate its latency, scalability, and multi-region behavior.
 
 - [x] Echo messages
 - [x] Support multiple messages
-- [x] Keep a connection alive
 - [x] Explore stream lifecycle
+- [x] Separate relay server from example clients
 
 ### Milestone 3: Application Protocol
 
@@ -77,7 +93,7 @@ evaluate its latency, scalability, and multi-region behavior.
 - [x] Handle truncated payloads
 - [x] Add unit tests
 
-## 3.2: Message Layer
+#### 3.2 Message Layer
 
 - [x] Define Message enum
 - [x] Define message types
@@ -98,7 +114,6 @@ evaluate its latency, scalability, and multi-region behavior.
 - [x] Test all message types
 - [x] Send messages over QUIC
 - [x] Decode received messages
-- [x] Echo decoded messages
 
 ### Milestone 4: Generic Pub/Sub
 
@@ -107,39 +122,58 @@ evaluate its latency, scalability, and multi-region behavior.
 - [x] Implement UNSUBSCRIBE
 - [x] Implement PUBLISH
 - [x] Maintain subscriptions
-- [x] Fan out messages
-- [x] Test multiple publishers (multiple publishers should not be allowed)
-- [x] Test multiple subscribers
+- [x] Track channel publishers
+- [x] Restrict DATA to the registered publisher
+- [x] Fan out DATA to subscribers
+- [x] Support multiple subscribers
+- [x] Prevent multiple publishers on the same topic
+- [x] Handle client disconnect cleanup
+- [x] Add relay lifecycle tests
 
-### Milestone 5: MoQ Integration
+### Milestone 5: Relay Service
+
+- [x] Build standalone relay
+- [x] Separate protocol and relay layers
+- [x] Introduce Relay service boundary
+- [x] Track connected clients
+- [x] Maintain per-client outbound channels
+- [x] Forward published data to subscribers
+- [x] Clean up client state on disconnect
+- [ ] Implement QUIC outbound writer
+- [ ] Add end-to-end publisher → relay → subscriber test
+- [ ] Define backpressure behavior
+- [ ] Define connection and resource limits
+
+### Milestone 6: Cloud Gaming Example
+
+- [ ] Create cloud gaming example
+- [ ] Simulate game server as publisher
+- [ ] Simulate game client as subscriber
+- [ ] Publish game state/frame data
+- [ ] Receive game data at the client
+- [ ] Measure relay forwarding latency
+
+### Milestone 7: MoQ Integration
 
 - [ ] Map pub/sub concepts to MoQ
 - [ ] Define tracks
 - [ ] Define groups
 - [ ] Define objects
-- [ ] Implement publisher
-- [ ] Implement subscriber
+- [ ] Implement MoQ publisher
+- [ ] Implement MoQ subscriber
+- [ ] Compare application-level framing with MoQ framing
 
-### Milestone 6: Relay
-
-- [ ] Build standalone relay
-- [ ] Forward subscriptions
-- [ ] Forward published data
-- [ ] Support multiple publishers
-- [ ] Support multiple subscribers
-- [ ] Measure relay overhead
-
-### Milestone 7: Multi-Relay Network
+### Milestone 8: Multi-Relay Network
 
 - [ ] Connect relays
 - [ ] Relay-to-relay subscriptions
 - [ ] Forward data across relays
-- [ ] Implement fanout
-- [ ] Build Austin/NYC/London topology
+- [ ] Implement inter-relay fanout
+- [ ] Build Austin / New York / London topology
 - [ ] Measure multi-hop latency
 - [ ] Test relay failures
 
-### Milestone 8: Video
+### Milestone 9: Video
 
 - [ ] Integrate AV1 encoder
 - [ ] Represent video as application data
@@ -150,7 +184,7 @@ evaluate its latency, scalability, and multi-region behavior.
 - [ ] Measure throughput
 - [ ] Measure frame loss
 
-### Milestone 9: Cloud Gaming
+### Milestone 10: Cloud Gaming
 
 - [ ] Game input channel
 - [ ] Game video channel

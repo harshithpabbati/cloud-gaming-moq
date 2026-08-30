@@ -4,19 +4,18 @@ use super::channel::ClientId;
 use crate::protocol::message::Message;
 use tokio::sync::mpsc;
 
-pub struct ClientConnection {
+struct ClientConnection {
     outbound: mpsc::Sender<Message>,
 }
 
+#[derive(Default)]
 pub struct ClientManager {
     clients: HashMap<ClientId, ClientConnection>,
 }
 
 impl ClientManager {
     pub fn new() -> Self {
-        Self {
-            clients: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn register(&mut self, outbound: mpsc::Sender<Message>) -> ClientId {

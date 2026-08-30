@@ -5,19 +5,18 @@ pub type ClientId = Uuid;
 
 #[derive(Debug, Default)]
 pub struct Channel {
-    pub publisher: Option<ClientId>,
-    pub subscribers: HashSet<ClientId>,
+    publisher: Option<ClientId>,
+    subscribers: HashSet<ClientId>,
 }
 
+#[derive(Default)]
 pub struct ChannelManager {
     channels: HashMap<String, Channel>,
 }
 
 impl ChannelManager {
     pub fn new() -> Self {
-        Self {
-            channels: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn publish(&mut self, channel_name: &str, client_id: ClientId) -> Result<(), &'static str> {
@@ -48,6 +47,17 @@ impl ChannelManager {
         if should_remove {
             self.channels.remove(channel_name);
         }
+    }
+
+    pub fn disconnect(&mut self, client_id: ClientId) {
+        self.channels.retain(|_, channel| {
+            if channel.publisher == Some(client_id) {
+                channel.publisher = None;
+            }
+            channel.subscribers.remove(&client_id);
+
+            channel.publisher.is_some() || !channel.subscribers.is_empty()
+        });
     }
 
     pub fn subscribers(&self, channel_name: &str) -> Option<&HashSet<ClientId>> {

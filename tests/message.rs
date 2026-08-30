@@ -1,3 +1,4 @@
+use moq_rs::protocol::MAX_FRAME_PAYLOAD_SIZE;
 use moq_rs::protocol::message::{Message, MessageType};
 
 #[test]
@@ -52,4 +53,27 @@ fn test_unknown_message_type() {
     let result = Message::decode(&bytes);
 
     assert!(result.is_err());
+}
+
+#[test]
+fn test_message_respects_framed_size_limit() {
+    let channel_name = "a".to_string();
+    let message = Message {
+        message_type: MessageType::Data,
+        payload: vec![0; MAX_FRAME_PAYLOAD_SIZE - 3 - channel_name.len()],
+        channel_name,
+    };
+
+    assert_eq!(message.encode().unwrap().len(), MAX_FRAME_PAYLOAD_SIZE);
+}
+
+#[test]
+fn test_message_larger_than_framed_size_limit_is_rejected() {
+    let message = Message {
+        message_type: MessageType::Data,
+        channel_name: "a".to_string(),
+        payload: vec![0; MAX_FRAME_PAYLOAD_SIZE - 3],
+    };
+
+    assert!(message.encode().is_err());
 }

@@ -163,3 +163,22 @@ fn test_multiple_publishers_not_allowed() {
 
     assert_eq!(manager.publisher("game-123"), Some(client_1));
 }
+
+#[test]
+fn test_disconnect_releases_publisher_and_subscriptions() {
+    let mut manager = ChannelManager::new();
+    let publisher_id = Uuid::new_v4();
+    let subscriber_id = Uuid::new_v4();
+
+    manager.publish("game-123", publisher_id).unwrap();
+    manager.subscribe("game-123", publisher_id);
+    manager.subscribe("game-123", subscriber_id);
+
+    manager.disconnect(publisher_id);
+
+    assert_eq!(manager.publisher("game-123"), None);
+    let subscribers = manager.subscribers("game-123").unwrap();
+    assert!(!subscribers.contains(&publisher_id));
+    assert!(subscribers.contains(&subscriber_id));
+    assert!(manager.publish("game-123", Uuid::new_v4()).is_ok());
+}
