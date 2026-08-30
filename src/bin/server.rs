@@ -1,10 +1,13 @@
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use moq_rs::protocol::framing::read_protocol_message;
 use moq_rs::protocol::handler::handle_message;
-use moq_rs::relay::channel::ChannelManager;
+use moq_rs::relay::channel::{ChannelManager, ClientId};
+use moq_rs::relay::client::ClientManager;
 use moq_rs::tls::make_server_config;
 use quinn::Endpoint;
+use tokio::sync::Mutex;
 
 const SERVER_ADDR: &str = "127.0.0.1:5000";
 
@@ -22,7 +25,9 @@ async fn main() {
 
     println!("Server listening on {server_addr}");
 
-    let mut channel_manager = ChannelManager::new();
+    let channel_manager = Arc::new(Mutex::new(ChannelManager::new()));
+    let client_manager = Arc::new(Mutex::new(ClientManager::new()));
+
     let mut next_client_id = 0;
 
     while let Some(incoming) = endpoint.accept().await {
@@ -32,22 +37,43 @@ async fn main() {
         let client_id = next_client_id;
         next_client_id += 1;
 
-        println!("Connected to {}", connection.remote_address());
+        let channel_manager = Arc::clone(&channel_manager);
+        let client_manager = Arc::clone(&client_manager);
 
-        let (mut send, mut recv) = connection
-            .accept_bi()
-            .await
-            .expect("failed to open bidirectional stream");
-
-        while let Some(message) = read_protocol_message(&mut recv)
-            .await
-            .expect("failed to read protocol message")
-        {
-            handle_message(&message, client_id, &mut channel_manager).await;
-        }
-
-        send.finish().expect("failed to finish stream");
-        println!("Echo complete, keeping connection alive");
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        tokio::spawn(async move {
+            handle_client(connection, client_id, channel_manager, client_manager).await;
+        });
     }
+}
+
+async fn handle_client(
+    connection: quinn::Connection,
+    client_id: ClientId,
+    channel_manager: Arc<Mutex<ChannelManager>>,
+    client_manager: Arc<Mutex<ClientManager>>,
+) {
+    client_manager.lock().await.register(client_id);
+
+    println!(
+        "Client {client_id} connected from {}",
+        connection.remote_address()
+    );
+
+    let (mut send, mut recv) = connection
+        .accept_bi()
+        .await
+        .expect("failed to open bidirectional stream");
+
+    while let Some(message) = read_protocol_message(&mut recv)
+        .await
+        .expect("failed to read protocol message")
+    {
+        let mut channel_manager = channel_manager.lock().await;
+        handle_message(&message, client_id, &mut channel_manager).await;
+    }
+
+    send.finish().expect("failed to finish stream");
+    client_manager.lock().await.remove(client_id);
+
+    println!("Client {client_id} disconnected");
 }

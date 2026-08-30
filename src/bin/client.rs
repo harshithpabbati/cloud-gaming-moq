@@ -6,6 +6,7 @@ use moq_rs::protocol::framing::{read_protocol_message, write_protocol_message};
 use moq_rs::protocol::message::{Message, MessageType};
 use quinn::{ClientConfig, Endpoint};
 use rustls::pki_types::CertificateDer;
+use tokio::signal;
 
 const SERVER_ADDR: &str = "127.0.0.1:5000";
 const CERT_PATH: &str = "certs/server.der";
@@ -81,17 +82,32 @@ async fn main() {
             .expect("failed to send protocol message");
     }
 
-    send.finish().expect("failed to finish stream");
+    println!("Connected. Press Ctrl+C to disconnect.");
 
-    while let Some(message) = read_protocol_message(&mut recv)
-        .await
-        .expect("failed to read protocol message")
-    {
-        println!(
-            "Received {:?} on channel '{}': {}",
-            message.message_type,
-            message.channel_name,
-            String::from_utf8_lossy(&message.payload)
-        );
+    tokio::select! {
+        result = async {
+            loop {
+                match read_protocol_message(&mut recv).await {
+                    Ok(Some(message)) => {
+                        println!(
+                            "Received {:?} on channel '{}': {}",
+                            message.message_type,
+                            message.channel_name,
+                            String::from_utf8_lossy(&message.payload)
+                        );
+                    }
+                    Ok(None) => break,
+                    Err(error) => {
+                        println!("Connection closed while reading: {error}");
+                        break;
+                    }
+                }
+            }
+        } => result,
+        _ = signal::ctrl_c() => {
+            println!("Disconnecting...");
+        }
     }
+
+    send.finish().expect("failed to finish stream");
 }
