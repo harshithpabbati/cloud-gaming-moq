@@ -1,13 +1,13 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use moq_rs::protocol::framing::read_protocol_message;
+use moq_rs::protocol::framing::{read_protocol_message, write_protocol_message};
 use moq_rs::protocol::handler::handle_message;
 use moq_rs::relay::channel::ChannelManager;
 use moq_rs::relay::client::ClientManager;
 use moq_rs::tls::make_server_config;
 use quinn::Endpoint;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, mpsc};
 
 const SERVER_ADDR: &str = "127.0.0.1:5000";
 
@@ -39,28 +39,52 @@ async fn handle_client(
     channel_manager: Arc<Mutex<ChannelManager>>,
     client_manager: Arc<Mutex<ClientManager>>,
 ) {
-    let client_id = client_manager.lock().await.register();
+    let (send, mut recv) = connection
+        .accept_bi()
+        .await
+        .expect("failed to open bidirectional stream");
+
+    let (outbound_tx, outbound_rx) = mpsc::channel(32);
+    let client_id = client_manager.lock().await.register(outbound_tx);
 
     println!(
         "Client {client_id} connected from {}",
         connection.remote_address()
     );
 
-    let (mut send, mut recv) = connection
-        .accept_bi()
-        .await
-        .expect("failed to open bidirectional stream");
+    let writer_task = tokio::spawn(async move {
+        write_client_messages(send, outbound_rx).await;
+    });
 
     while let Some(message) = read_protocol_message(&mut recv)
         .await
         .expect("failed to read protocol message")
     {
-        let mut channel_manager = channel_manager.lock().await;
-        handle_message(&message, client_id, &mut channel_manager).await;
+        handle_message(
+            &message,
+            client_id,
+            channel_manager.as_ref(),
+            client_manager.as_ref(),
+        )
+        .await;
+    }
+
+    client_manager.lock().await.remove(client_id);
+    writer_task.await.expect("client writer task failed");
+
+    println!("Client {client_id} disconnected");
+}
+
+async fn write_client_messages(
+    mut send: quinn::SendStream,
+    mut outbound_rx: mpsc::Receiver<moq_rs::protocol::message::Message>,
+) {
+    while let Some(message) = outbound_rx.recv().await {
+        if let Err(error) = write_protocol_message(&mut send, &message).await {
+            println!("failed to send protocol message to client: {error}");
+            return;
+        }
     }
 
     send.finish().expect("failed to finish stream");
-    client_manager.lock().await.remove(client_id);
-
-    println!("Client {client_id} disconnected");
 }

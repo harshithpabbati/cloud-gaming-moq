@@ -106,8 +106,8 @@ evaluate its latency, scalability, and multi-region behavior.
 - [x] Implement SUBSCRIBE
 - [x] Implement UNSUBSCRIBE
 - [x] Implement PUBLISH
-- [ ] Maintain subscriptions
-- [ ] Fan out messages
+- [x] Maintain subscriptions
+- [x] Fan out messages
 - [x] Test multiple publishers (multiple publishers should not be allowed)
 - [x] Test multiple subscribers
 
